@@ -33,6 +33,27 @@ bool FMcpBridgeWebSocket::PerformHandshake() {
   Port = ParsedUrl.Port;
   HandshakePath = ParsedUrl.PathWithQuery;
 
+  // SphereX: исходящее соединение разрешено ТОЛЬКО на эту машину.
+  //
+  // Единственная точка, через которую мост подключается куда-либо сам
+  // (EndpointUrl из настроек). Если адрес не петлевой — не подключаемся
+  // вовсе, вместо того чтобы полагаться на то, что настройку никто не
+  // поменяет. Проверка стоит ДО создания сокета, поэтому наружу не уходит
+  // ни одного пакета, включая DNS-запрос имени.
+  {
+    const FString LowerHost = HostHeader.TrimStartAndEnd().ToLower();
+    const bool bIsLocal =
+        LowerHost == TEXT("localhost") || LowerHost == TEXT("::1") ||
+        LowerHost == TEXT("[::1]") || LowerHost.StartsWith(TEXT("127."));
+    if (!bIsLocal) {
+      TearDown(FString::Printf(TEXT("SphereX: outbound connections are "
+                                    "restricted to loopback; refused '%s'."),
+                               *HostHeader),
+               false, WebSocketCloseCodeAbnormalClosure);
+      return false;
+    }
+  }
+
   TSharedPtr<FInternetAddr> Endpoint;
   if (!ResolveEndpoint(Endpoint) || !Endpoint.IsValid()) {
     TearDown(TEXT("Unable to resolve WebSocket host."), false,

@@ -20,6 +20,17 @@ bool HandleEnableVoiceChat(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // SphereX: голосовой чат ОТКЛЮЧЁН.
+    //
+    // Единственная операция моста, которая подключается к ВНЕШНЕМУ сервису
+    // (EOS/Vivox) — то есть уходит за пределы этой машины. Для съёмки она не
+    // нужна вовсе, а оставлять открытый путь наружу ради неиспользуемой
+    // возможности незачем. Возвращаем отказ до любых действий.
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("SphereX: voice chat is disabled in this build (external service)"),
+        nullptr);
+    return true;
+
     if (!Payload.IsValid() || !Payload->HasField(TEXT("voiceEnabled")))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,

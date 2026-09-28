@@ -9,6 +9,40 @@
  * Sets sensible out-of-the-box values for connectivity, listening behavior, runtime timing, and logging
  * so the plugin runs in server/listen mode by default and presents a usable configuration in Project Settings.
  */
+/**
+ * @brief SphereX: держит мост запертым на этой машине.
+ *
+ * Конструктор задаёт значения по умолчанию, но конфиг проекта загружается
+ * ПОСЛЕ него и может их перебить. Поэтому запираем ещё раз здесь — это
+ * последняя точка, где настройки уже прочитаны, но ещё никем не использованы.
+ */
+void UMcpAutomationBridgeSettings::McpSphereXEnforceLoopback()
+{
+    if (bAllowNonLoopback)
+    {
+        bAllowNonLoopback = false;
+    }
+    const FString Host = ListenHost.TrimStartAndEnd();
+    if (Host != TEXT("127.0.0.1") && Host != TEXT("::1") && Host != TEXT("localhost"))
+    {
+        ListenHost = TEXT("127.0.0.1");
+    }
+}
+
+void UMcpAutomationBridgeSettings::PostInitProperties()
+{
+    Super::PostInitProperties();
+    McpSphereXEnforceLoopback();
+}
+
+#if WITH_EDITOR
+void UMcpAutomationBridgeSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+    McpSphereXEnforceLoopback();
+}
+#endif
+
 UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
 {
     // Provide practical defaults so the Project Settings UI shows a usable out-of-the-box configuration.
@@ -22,7 +56,12 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     ListenPorts = TEXT("8090,8091");
     bMultiListen = true;
     bRequireCapabilityToken = true;
-    bAllowNonLoopback = false; // Security: default to loopback-only binding
+    // SphereX: loopback-only, БЕЗ возможности включить обратно.
+    // Значение перезаписывается в PostInitProperties и PostLoad, поэтому
+    // ни конфиг проекта, ни Project Settings, ни переменная окружения не
+    // откроют порт наружу. Мост должен быть доступен только с этой машины.
+    bAllowNonLoopback = false;
+    ListenHost = TEXT("127.0.0.1");
     MaxMovieRenderResolutionDimension = 8192;
     MaxMovieRenderPixelCount = 33554432;
     MaxMovieRenderFrameCount = 10000;
@@ -66,10 +105,18 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     MaxTakeRecorderStringLength = 1024;
     MaxMovieRenderTimeoutMs = 3600000;
     MaxMovieRenderCancellationWaitMs = 30000;
-    // CRITICAL: Default to 0 (disabled) for development/testing - prevents rate limit disconnects during rapid API calls
-    // For production deployments, set to a reasonable limit (e.g., 600) via Project Settings or environment variables
-    MaxMessagesPerMinute = 0;
-    MaxAutomationRequestsPerMinute = 0;
+    // SphereX: rate limiting is ON by default.
+    //
+    // Upstream ships 0 (disabled) so rapid API calls never trip the limiter.
+    // We take the opposite trade: an editor that answers a runaway client
+    // forever is an editor that hangs, and the loopback-only binding does not
+    // help here -- any local process can reach the port. 600/minute is the
+    // value upstream itself suggests for production and is ten calls per
+    // second, far above anything interactive work produces.
+    //
+    // Raise it in Project Settings if a batch job legitimately needs more.
+    MaxMessagesPerMinute = 600;
+    MaxAutomationRequestsPerMinute = 600;
     bEnableTls = false;
     TlsCertificatePath = TEXT("");
     TlsPrivateKeyPath = TEXT("");

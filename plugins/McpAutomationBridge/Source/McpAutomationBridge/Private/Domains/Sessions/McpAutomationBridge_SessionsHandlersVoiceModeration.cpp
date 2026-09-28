@@ -32,6 +32,16 @@ bool HandleMutePlayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // SphereX: отключено вместе с голосовым чатом.
+    //
+    // Операция поднимает онлайн-подсистему (IOnlineSubsystem), а та сама
+    // ходит к внешним сервисам платформы. Для съёмки не нужна ни она, ни
+    // голос, поэтому путь наружу закрыт целиком, а не наполовину.
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("SphereX: voice moderation is disabled in this build (online subsystem)"),
+        nullptr);
+    return true;
+
     FString PlayerName = GetJsonStringField(Payload, TEXT("playerName"), TEXT(""));
     FString TargetPlayerId = GetJsonStringField(Payload, TEXT("targetPlayerId"), TEXT(""));
     bool bMuted = GetJsonBoolField(Payload, TEXT("muted"), true);

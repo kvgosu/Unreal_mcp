@@ -75,6 +75,16 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bAllowNonLoopback;
 
+public:
+    /** SphereX: запирает мост на этой машине; вызывается после загрузки конфига. */
+    void McpSphereXEnforceLoopback();
+
+    virtual void PostInitProperties() override;
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
+
     /** Maximum output width or height accepted by Movie Render Queue. */
     UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
         meta = (ClampMin = "1", ClampMax = "16384"))
