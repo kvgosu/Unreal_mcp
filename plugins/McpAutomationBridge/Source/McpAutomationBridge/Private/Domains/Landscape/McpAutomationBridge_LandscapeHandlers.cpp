@@ -9,6 +9,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEditLandscape(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   if (HandleModifyHeightmap(RequestId, Action, Payload, RequestingSocket))
     return true;
+  // SphereX: карта высот файлом — один вызов вместо сотен
+  if (HandleImportHeightmapFile(RequestId, Action, Payload, RequestingSocket))
+    return true;
   if (HandlePaintLandscapeLayer(RequestId, Action, Payload, RequestingSocket))
     return true;
   if (HandleSculptLandscape(RequestId, Action, Payload, RequestingSocket))

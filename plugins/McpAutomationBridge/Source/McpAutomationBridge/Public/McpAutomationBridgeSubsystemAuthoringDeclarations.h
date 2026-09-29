@@ -9,6 +9,7 @@ MCP_DECLARE_ACTION_HANDLER(HandleCreateLandscape); \
 MCP_DECLARE_ACTION_HANDLER(HandleCreateLandscapeGrassType); \
 MCP_DECLARE_ACTION_HANDLER(HandleEditLandscape); \
 MCP_DECLARE_ACTION_HANDLER(HandleModifyHeightmap); \
+  /* SphereX: импорт карты высот файлом, а не массивом в запросе */ \n  MCP_DECLARE_ACTION_HANDLER(HandleImportHeightmapFile); \
 MCP_DECLARE_ACTION_HANDLER(HandlePaintLandscapeLayer); \
 MCP_DECLARE_ACTION_HANDLER(HandleSculptLandscape); \
 MCP_DECLARE_ACTION_HANDLER(HandleSetLandscapeMaterial); \
