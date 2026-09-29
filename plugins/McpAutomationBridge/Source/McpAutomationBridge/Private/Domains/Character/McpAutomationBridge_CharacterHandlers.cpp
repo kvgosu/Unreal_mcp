@@ -66,6 +66,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     if (SubAction == TEXT("create_metahuman")) return McpMetaHumanHandlers::HandleCreateMetaHuman(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("rig_metahuman")) return McpMetaHumanHandlers::HandleRigMetaHuman(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("build_metahuman")) return McpMetaHumanHandlers::HandleBuildMetaHuman(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("metahuman_textures")) return McpMetaHumanHandlers::HandleMetaHumanTextures(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("export_metahuman")) return McpMetaHumanHandlers::HandleExportMetaHuman(this, RequestId, Payload, RequestingSocket);
 
     SendAutomationError(RequestingSocket, RequestId,

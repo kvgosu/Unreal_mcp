@@ -84,6 +84,8 @@ bool HandleMetaHumanStatus(UMcpAutomationBridgeSubsystem* Self, const FString& R
 bool HandleCreateMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 bool HandleRigMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 bool HandleBuildMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
+// SphereX: синтез текстур — без него сборка отказывает, а причина видна только в журнале
+bool HandleMetaHumanTextures(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 bool HandleExportMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 }
 #endif

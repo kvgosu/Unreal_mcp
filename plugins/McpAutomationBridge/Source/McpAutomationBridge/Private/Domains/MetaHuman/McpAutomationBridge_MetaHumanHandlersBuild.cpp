@@ -5,6 +5,65 @@
 
 namespace McpMetaHumanHandlers
 {
+// SphereX: metahuman_textures -- synthesise the character's texture sources.
+//
+// Without this the build refuses with "The Character is missing textures, use
+// Download Texture Sources to create them before assembling", and that reason
+// appears ONLY in the editor log: CanBuildMetaHuman just answers false, so from
+// the outside it looks exactly like an unrigged character. We lost a rig cycle
+// to that before adding this.
+//
+// Synthesis is local (Optional/TextureSynthesis in Core Data), not a cloud call,
+// so blocking is the sane default here -- unlike auto-rigging.
+bool HandleMetaHumanTextures(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket)
+{
+    UObject* Subsystem = nullptr;
+    UObject* Character = RequireEditableCharacter(Self, RequestId, Payload, Socket, Subsystem);
+    if (!Character)
+    {
+        return true;
+    }
+
+    // Field names are the UPROPERTY names on FMetaHumanCharacterTextureRequestParams.
+    TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+    Params->SetBoolField(TEXT("bReportProgress"), GetJsonBoolField(Payload, TEXT("reportProgress"), false));
+    Params->SetBoolField(TEXT("bBlocking"), GetJsonBoolField(Payload, TEXT("blocking"), true));
+
+    TSharedPtr<FJsonObject> Args = MakeShared<FJsonObject>();
+    Args->SetObjectField(TEXT("InParams"), Params);
+
+    TSharedPtr<FJsonObject> Results;
+    FString Error;
+    if (!InvokeMetaHumanFunction(Subsystem, TEXT("RequestTextureSources"), Args, Character, Results, Error))
+    {
+        Self->SendAutomationError(Socket, RequestId, Error, TEXT("OPERATION_FAILED"));
+        return true;
+    }
+
+    // The request answers through delegates, so report build readiness rather
+    // than claiming success.
+    bool bCanBuild = false;
+    TSharedPtr<FJsonObject> CanBuildArgs = MakeShared<FJsonObject>();
+    CanBuildArgs->SetBoolField(TEXT("bInLogError"), true);
+    TSharedPtr<FJsonObject> CanBuildResults;
+    FString CanBuildError;
+    if (InvokeMetaHumanFunction(Subsystem, TEXT("CanBuildMetaHuman"), CanBuildArgs, Character, CanBuildResults, CanBuildError)
+        && CanBuildResults.IsValid())
+    {
+        CanBuildResults->TryGetBoolField(TEXT("ReturnValue"), bCanBuild);
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("characterPath"), GetJsonStringField(Payload, TEXT("characterPath")));
+    Result->SetBoolField(TEXT("canBuild"), bCanBuild);
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        bCanBuild ? TEXT("Texture sources ready; character can be built")
+                  : TEXT("Texture sources requested; character still not buildable"),
+        Result, FString());
+    return true;
+}
+
 // rig_metahuman -- request auto-rigging for a character.
 //
 // This is the step that gates assembly: CanBuildMetaHuman refuses an unrigged
