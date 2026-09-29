@@ -181,8 +181,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCaptureViewport(
   Client->Viewport->Draw();
   FlushRenderingCommands();
 
-  const FString Written = FScreenshotRequest::GetFilename();
-  const bool bExists = !Written.IsEmpty() && FPaths::FileExists(Written);
+  // ⚠ GetFilename() пустеет, как только механизм отработал, и тогда ответ
+  // говорит «файл не записан» при живом файле на диске. Проверяем ОБА пути:
+  // сначала названный механизмом, потом тот, что просили.
+  FString Written = FScreenshotRequest::GetFilename();
+  bool bExists = !Written.IsEmpty() && FPaths::FileExists(Written);
+  if (!bExists && FPaths::FileExists(OutPath)) {
+    Written = OutPath;
+    bExists = true;
+  }
 
   const FVector Loc = Client->GetViewLocation();
   const FRotator Rot = Client->GetViewRotation();

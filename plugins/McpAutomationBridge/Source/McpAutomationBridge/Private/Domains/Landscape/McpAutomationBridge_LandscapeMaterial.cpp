@@ -6,6 +6,8 @@
 #include "Dom/JsonObject.h"
 #include "EditorAssetLibrary.h"
 #include "Landscape.h"
+#include "LandscapeInfo.h"
+#include "LandscapeProxy.h"
 #include "Materials/Material.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -94,6 +96,26 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
 
               Landscape->LandscapeMaterial = Mat;
               Landscape->PostEditChange();
+
+              // SphereX: ⚠ PostEditChange МАЛО. Компоненты ландшафта держат
+              // свои материальные экземпляры, собранные при импорте, и сами
+              // их не пересобирают: свойство читается новым, а в кадре
+              // остаётся клетчатый WorldGridMaterial. Это и выглядело как
+              // «материал не назначился».
+              int32 Refreshed = 0;
+              if (ULandscapeInfo *Info = Landscape->GetLandscapeInfo()) {
+                Info->ForAllLandscapeProxies([&](ALandscapeProxy *Proxy) {
+                  if (Proxy) {
+                    Proxy->UpdateAllComponentMaterialInstances();
+                    ++Refreshed;
+                  }
+                });
+              } else {
+                Landscape->UpdateAllComponentMaterialInstances();
+                Refreshed = 1;
+              }
+              Landscape->MarkPackageDirty();
+
               TSharedPtr<FJsonObject> Resp =
                   McpHandlerUtils::CreateResultObject();
               Resp->SetBoolField(TEXT("success"), true);
@@ -102,6 +124,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
               Resp->SetStringField(TEXT("landscapeName"),
                                    Landscape->GetActorLabel());
               Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+              Resp->SetNumberField(TEXT("proxiesRefreshed"), Refreshed);
               Subsystem->SendAutomationResponse(
                   RequestingSocket, RequestId, true,
                   TEXT("Landscape material set"), Resp, FString());

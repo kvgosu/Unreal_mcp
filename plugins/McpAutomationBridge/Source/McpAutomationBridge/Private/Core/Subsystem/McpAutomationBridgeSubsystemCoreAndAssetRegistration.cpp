@@ -47,6 +47,10 @@ void UMcpAutomationBridgeSubsystem::RegisterCoreAndAssetHandlers()
     // SphereX: глаза моста — без них работа идёт вслепую
     MCP_REGISTER_DIRECT("set_viewport_camera", HandleViewportCamera);
     MCP_REGISTER_DIRECT("capture_viewport", HandleCaptureViewport);
+    // SphereX: импорт ландшафта из файла — то же, что пункт меню Import from File
+    MCP_REGISTER_DIRECT("import_landscape_file", HandleImportLandscapeFile);
+    MCP_REGISTER_DIRECT("sample_landscape_height", HandleSampleLandscapeHeight);
+    MCP_REGISTER_DIRECT("spawn_instances_from_file", HandleSpawnInstancesFromFile);
     MCP_REGISTER_DIRECT("edit_landscape", HandleEditLandscape);
     MCP_REGISTER_DIRECT("add_foliage_type", HandleAddFoliageType);
     MCP_REGISTER_DIRECT("create_procedural_foliage", HandleCreateProceduralFoliage);
