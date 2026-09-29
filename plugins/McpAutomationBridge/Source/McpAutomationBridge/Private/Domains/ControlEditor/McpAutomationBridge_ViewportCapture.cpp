@@ -96,6 +96,19 @@ bool UMcpAutomationBridgeSubsystem::HandleViewportCamera(
     Rot = (Target - Loc).Rotation();
   }
 
+  // SphereX: съёмочный режим. Оси в углу, значки акторов и подписи — это
+  // графика РЕДАКТОРА, и в промо-ролике она недопустима. SetGameView гасит
+  // редакторские примитивы, bDrawAxes — триаду в углу.
+  if (Payload.IsValid() && Payload->HasField(TEXT("gameView"))) {
+    const bool bGame = Payload->GetBoolField(TEXT("gameView"));
+    Client->SetGameView(bGame);
+    Client->bDrawAxes = !bGame;
+    Client->bDrawAxesGame = !bGame;
+  }
+  if (Payload.IsValid() && Payload->HasField(TEXT("realtime"))) {
+    Client->SetRealtime(Payload->GetBoolField(TEXT("realtime")));
+  }
+
   Client->SetViewLocation(Loc);
   Client->SetViewRotation(Rot);
   if (Payload.IsValid()) {
@@ -118,6 +131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleViewportCamera(
   R->SetNumberField(TEXT("roll"), Rot.Roll);
   Result->SetObjectField(TEXT("rotation"), R);
   Result->SetNumberField(TEXT("fov"), Client->ViewFOV);
+  Result->SetBoolField(TEXT("gameView"), Client->IsInGameView());
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Viewport camera set"), Result);
   return true;
