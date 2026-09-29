@@ -104,6 +104,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
   const double ZOffset = Payload->HasField(TEXT("zOffset"))
                              ? Payload->GetNumberField(TEXT("zOffset"))
                              : 0.0;
+  // ⚠ Высота ТОЛЬКО В ЦЕНТРЕ годится лишь на ровном месте. Замерено на
+  // Алматы: уклон под дорогой 2,33 %, перепад по концам плитки — медиана
+  // 1,01 м при толщине полотна 0,2 м. У 86 % плиток один конец оказывался
+  // закопан, другой висел, и дорога распадалась на куски.
+  //   center — как было, земля под серединой;
+  //   min    — САМЫЙ НИЗКИЙ из углов основания: дом садится на землю целиком
+  //            и ни один угол не висит;
+  //   slope  — концы по локальной оси X задают наклон: полотно ложится
+  //            вдоль склона, а не поперёк него.
+  const FString SnapMode = Payload->HasField(TEXT("snapMode"))
+                               ? Payload->GetStringField(TEXT("snapMode"))
+                               : TEXT("center");
+  const bool bSnapMin = SnapMode.Equals(TEXT("min"), ESearchCase::IgnoreCase);
+  const bool bSnapSlope = SnapMode.Equals(TEXT("slope"), ESearchCase::IgnoreCase);
+  // насколько утопить основание: скрывает остаток ступеньки на переломах
+  const double Sink = Payload->HasField(TEXT("sink"))
+                          ? Payload->GetNumberField(TEXT("sink"))
+                          : 0.0;
 
   const FString Name = Payload->HasField(TEXT("name"))
                            ? Payload->GetStringField(TEXT("name"))
@@ -153,18 +171,63 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
     (*O)->TryGetNumberField(TEXT("sy"), SY);
     (*O)->TryGetNumberField(TEXT("sz"), SZ);
 
+    double Pitch = 0.0;
     if (Landscape) {
-      const TOptional<float> G =
-          Landscape->GetHeightAtLocation(FVector(X, Y, 0.0));
-      if (G.IsSet()) {
-        Z = G.GetValue();
+      const double Rad = FMath::DegreesToRadians(Yaw);
+      const double CosY = FMath::Cos(Rad);
+      const double SinY = FMath::Sin(Rad);
+      bool bGot = false;
+
+      if (bSnapSlope) {
+        // концы отрезка по локальной оси X; между ними и натягиваем плитку
+        const double Half = SX * 50.0;
+        const TOptional<float> A = Landscape->GetHeightAtLocation(
+            FVector(X - CosY * Half, Y - SinY * Half, 0.0));
+        const TOptional<float> B = Landscape->GetHeightAtLocation(
+            FVector(X + CosY * Half, Y + SinY * Half, 0.0));
+        if (A.IsSet() && B.IsSet()) {
+          Z = 0.5 * (A.GetValue() + B.GetValue());
+          const double Run = FMath::Max(1.0, 2.0 * Half);
+          Pitch = FMath::RadiansToDegrees(
+              FMath::Atan2(static_cast<double>(B.GetValue() - A.GetValue()), Run));
+          bGot = true;
+        }
+      } else if (bSnapMin) {
+        // четыре угла основания: садимся на САМЫЙ НИЗКИЙ, иначе угол висит
+        const double HX = SX * 50.0;
+        const double HY = SY * 50.0;
+        static const double Corners[4][2] = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+        double Low = 0.0;
+        int32 Hits = 0;
+        for (int32 C = 0; C < 4; ++C) {
+          const double DX = Corners[C][0] * HX;
+          const double DY = Corners[C][1] * HY;
+          const TOptional<float> G = Landscape->GetHeightAtLocation(
+              FVector(X + DX * CosY - DY * SinY, Y + DX * SinY + DY * CosY, 0.0));
+          if (G.IsSet()) {
+            Low = (Hits == 0) ? G.GetValue() : FMath::Min(Low, static_cast<double>(G.GetValue()));
+            ++Hits;
+          }
+        }
+        if (Hits > 0) {
+          Z = Low;
+          bGot = true;
+        }
       } else {
+        const TOptional<float> G =
+            Landscape->GetHeightAtLocation(FVector(X, Y, 0.0));
+        if (G.IsSet()) {
+          Z = G.GetValue();
+          bGot = true;
+        }
+      }
+      if (!bGot) {
         ++NoGround;
       }
     }
     // куб стоит центром, а нам надо основанием на земле
-    Transforms.Add(FTransform(FRotator(0.0, Yaw, 0.0),
-                              FVector(X, Y, Z + SZ * 50.0 + ZOffset),
+    Transforms.Add(FTransform(FRotator(Pitch, Yaw, 0.0),
+                              FVector(X, Y, Z + SZ * 50.0 + ZOffset - Sink),
                               FVector(SX, SY, SZ)));
   }
 
@@ -180,6 +243,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
   Result->SetNumberField(TEXT("placed"), Transforms.Num());
   Result->SetNumberField(TEXT("instances"), Hism->GetInstanceCount());
   Result->SetBoolField(TEXT("snappedToLandscape"), Landscape != nullptr);
+  Result->SetStringField(TEXT("snapMode"), SnapMode);
   Result->SetNumberField(TEXT("withoutGround"), NoGround);
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Instances spawned"), Result);

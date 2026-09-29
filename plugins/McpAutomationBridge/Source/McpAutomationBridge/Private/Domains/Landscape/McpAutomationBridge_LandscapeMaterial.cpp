@@ -102,17 +102,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
               // их не пересобирают: свойство читается новым, а в кадре
               // остаётся клетчатый WorldGridMaterial. Это и выглядело как
               // «материал не назначился».
+              // ⚠ Свой обход прокси не нужен и не соберётся:
+              // ForAllLandscapeProxies в 5.8 НЕТ. У ULandscapeInfo есть
+              // готовое — оно само зовёт UpdateAllComponentMaterialInstances
+              // у всех прокси (см. LandscapeInfo.h, строка 413).
               int32 Refreshed = 0;
               if (ULandscapeInfo *Info = Landscape->GetLandscapeInfo()) {
-                Info->ForAllLandscapeProxies([&](ALandscapeProxy *Proxy) {
-                  if (Proxy) {
-                    Proxy->UpdateAllComponentMaterialInstances();
-                    ++Refreshed;
-                  }
-                });
+                Info->UpdateAllComponentMaterialInstances(true);
+                Refreshed = 1;
               } else {
                 Landscape->UpdateAllComponentMaterialInstances();
-                Refreshed = 1;
               }
               Landscape->MarkPackageDirty();
 
