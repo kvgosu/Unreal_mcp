@@ -79,10 +79,8 @@ public:
     /** SphereX: запирает мост на этой машине; вызывается после загрузки конфига. */
     void McpSphereXEnforceLoopback();
 
+    /** Конфиг проекта грузится ПОСЛЕ конструктора — запираем ещё раз здесь. */
     virtual void PostInitProperties() override;
-#if WITH_EDITOR
-    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 
 
     /** Maximum output width or height accepted by Movie Render Queue. */
@@ -315,6 +313,8 @@ public:
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override
     {
         Super::PostEditChangeProperty(PropertyChangedEvent);
+        // SphereX: настройку правили руками — снова запираем на петлю
+        McpSphereXEnforceLoopback();
         FPlatformAtomics::InterlockedIncrement(&EditGenerationCounter());
         SaveConfig();
     }

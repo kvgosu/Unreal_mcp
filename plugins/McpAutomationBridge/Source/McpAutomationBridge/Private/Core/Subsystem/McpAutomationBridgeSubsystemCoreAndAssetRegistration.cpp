@@ -40,6 +40,13 @@ void UMcpAutomationBridgeSubsystem::RegisterCoreAndAssetHandlers()
     MCP_REGISTER_DIRECT("sculpt_landscape", HandleSculptLandscape);
     MCP_REGISTER_DIRECT("set_landscape_material", HandleSetLandscapeMaterial);
     MCP_REGISTER_DIRECT("modify_heightmap", HandleModifyHeightmap);
+    // SphereX: карта высот ФАЙЛОМ — один вызов вместо сотен запросов с
+    // массивом. Обработчика мало: действие надо ещё и зарегистрировать здесь,
+    // иначе мост отвечает UNKNOWN_ACTION.
+    MCP_REGISTER_DIRECT("import_heightmap_file", HandleImportHeightmapFile);
+    // SphereX: глаза моста — без них работа идёт вслепую
+    MCP_REGISTER_DIRECT("set_viewport_camera", HandleViewportCamera);
+    MCP_REGISTER_DIRECT("capture_viewport", HandleCaptureViewport);
     MCP_REGISTER_DIRECT("edit_landscape", HandleEditLandscape);
     MCP_REGISTER_DIRECT("add_foliage_type", HandleAddFoliageType);
     MCP_REGISTER_DIRECT("create_procedural_foliage", HandleCreateProceduralFoliage);

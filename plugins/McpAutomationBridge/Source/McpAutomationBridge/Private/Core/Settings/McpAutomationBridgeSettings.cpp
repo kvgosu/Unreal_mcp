@@ -32,16 +32,9 @@ void UMcpAutomationBridgeSettings::McpSphereXEnforceLoopback()
 void UMcpAutomationBridgeSettings::PostInitProperties()
 {
     Super::PostInitProperties();
+    // SphereX: конфиг уже прочитан — запираем мост на этой машине
     McpSphereXEnforceLoopback();
 }
-
-#if WITH_EDITOR
-void UMcpAutomationBridgeSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-    McpSphereXEnforceLoopback();
-}
-#endif
 
 UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
 {
