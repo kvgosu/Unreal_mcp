@@ -86,6 +86,8 @@ bool HandleRigMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleBuildMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 // SphereX: синтез текстур — без него сборка отказывает, а причина видна только в журнале
 bool HandleMetaHumanTextures(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
+// SphereX: поставить собранного персонажа в уровень — без этого на результат не взглянуть
+bool HandleSpawnMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 bool HandleExportMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 }
 #endif

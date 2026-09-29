@@ -64,6 +64,53 @@ bool HandleMetaHumanTextures(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 
+// SphereX: spawn_metahuman -- put the assembled character into the level.
+//
+// Without this there is no way to LOOK at the result: build reports success and
+// writes an asset, but an asset is not a frame. The function falls back to a
+// default actor type if the pipeline's own actor fails, so it always returns
+// something -- which means the returned path is the only proof the spawn took.
+//
+// bKeepTransient=false by default: a transient actor vanishes on save and the
+// level would look empty next session.
+bool HandleSpawnMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket)
+{
+    UObject* Subsystem = nullptr;
+    UObject* Character = RequireEditableCharacter(Self, RequestId, Payload, Socket, Subsystem);
+    if (!Character)
+    {
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> Args = MakeShared<FJsonObject>();
+    Args->SetObjectField(TEXT("InCharacter"), nullptr);
+    Args->SetBoolField(TEXT("bKeepTransient"), GetJsonBoolField(Payload, TEXT("keepTransient"), false));
+
+    TSharedPtr<FJsonObject> Results;
+    FString Error;
+    if (!InvokeMetaHumanFunction(Subsystem, TEXT("SpawnMetaHumanActor"), Args, Character, Results, Error))
+    {
+        Self->SendAutomationError(Socket, RequestId, Error, TEXT("OPERATION_FAILED"));
+        return true;
+    }
+
+    FString ActorPath;
+    if (Results.IsValid())
+    {
+        Results->TryGetStringField(TEXT("ReturnValue"), ActorPath);
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("characterPath"), GetJsonStringField(Payload, TEXT("characterPath")));
+    Result->SetStringField(TEXT("actorPath"), ActorPath);
+    Result->SetBoolField(TEXT("spawned"), !ActorPath.IsEmpty());
+    Self->SendAutomationResponse(Socket, RequestId, !ActorPath.IsEmpty(),
+        ActorPath.IsEmpty() ? TEXT("Spawn returned no actor") : TEXT("MetaHuman actor spawned"),
+        Result, ActorPath.IsEmpty() ? TEXT("OPERATION_FAILED") : FString());
+    return true;
+}
+
 // rig_metahuman -- request auto-rigging for a character.
 //
 // This is the step that gates assembly: CanBuildMetaHuman refuses an unrigged
