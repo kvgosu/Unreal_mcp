@@ -51,6 +51,8 @@ void UMcpAutomationBridgeSubsystem::RegisterCoreAndAssetHandlers()
     MCP_REGISTER_DIRECT("import_landscape_file", HandleImportLandscapeFile);
     MCP_REGISTER_DIRECT("sample_landscape_height", HandleSampleLandscapeHeight);
     MCP_REGISTER_DIRECT("spawn_instances_from_file", HandleSpawnInstancesFromFile);
+    // SphereX: один актор на группу — дом отдельным объектом в Outliner
+    MCP_REGISTER_DIRECT("spawn_groups_from_file", HandleSpawnGroupsFromFile);
     // SphereX: узкая дверь под Python — ФАЙЛ изнутри проекта, не текст команды
     MCP_REGISTER_DIRECT("run_python_file", HandleRunPythonFile);
     MCP_REGISTER_DIRECT("edit_landscape", HandleEditLandscape);

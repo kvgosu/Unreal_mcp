@@ -127,6 +127,28 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
                            ? Payload->GetStringField(TEXT("name"))
                            : TEXT("SX_Instances");
 
+  // точка опоры меша: cube — центр (базовый куб 100 см, подъём на SZ*50),
+  // base — основание в нуле меша (настоящие здания, секции хрущёвок)
+  const FString Pivot = Payload->HasField(TEXT("pivot"))
+                            ? Payload->GetStringField(TEXT("pivot"))
+                            : TEXT("cube");
+  const bool bPivotBase = Pivot.Equals(TEXT("base"), ESearchCase::IgnoreCase);
+
+  // повторный прогон ничего не плодит: прежний набор с тем же именем — долой
+  int32 Replaced = 0;
+  if (Payload->HasField(TEXT("replace")) && Payload->GetBoolField(TEXT("replace"))) {
+    TArray<AActor *> Old;
+    for (TActorIterator<AActor> It(World); It; ++It) {
+      if (It->GetActorLabel() == Name) {
+        Old.Add(*It);
+      }
+    }
+    for (AActor *A : Old) {
+      World->EditorDestroyActor(A, true);
+      ++Replaced;
+    }
+  }
+
   AActor *Holder = World->SpawnActor<AActor>();
   if (!Holder) {
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -134,6 +156,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
     return true;
   }
   Holder->SetActorLabel(Name);
+  // папка в Outliner: город раскладывается по слоям, а не лежит кучей
+  FString Folder;
+  if (Payload->TryGetStringField(TEXT("folder"), Folder) && !Folder.IsEmpty()) {
+    Holder->SetFolderPath(FName(*Folder));
+  }
   UHierarchicalInstancedStaticMeshComponent *Hism =
       NewObject<UHierarchicalInstancedStaticMeshComponent>(Holder);
   Hism->SetStaticMesh(Mesh);
@@ -171,7 +198,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
     (*O)->TryGetNumberField(TEXT("sy"), SY);
     (*O)->TryGetNumberField(TEXT("sz"), SZ);
 
+    // наклон можно отдать готовым: планировку города считаем снаружи, и
+    // высоту с наклоном знает она, а не ландшафт (Rob 01.10: «ландшафт
+    // подгонять, а не дома и дороги двигать»)
     double Pitch = 0.0;
+    (*O)->TryGetNumberField(TEXT("pitch"), Pitch);
     if (Landscape) {
       const double Rad = FMath::DegreesToRadians(Yaw);
       const double CosY = FMath::Cos(Rad);
@@ -227,7 +258,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
     }
     // куб стоит центром, а нам надо основанием на земле
     Transforms.Add(FTransform(FRotator(Pitch, Yaw, 0.0),
-                              FVector(X, Y, Z + SZ * 50.0 + ZOffset - Sink),
+                              FVector(X, Y, Z + (bPivotBase ? 0.0 : SZ * 50.0) + ZOffset - Sink),
                               FVector(SX, SY, SZ)));
   }
 
@@ -244,6 +275,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
   Result->SetNumberField(TEXT("instances"), Hism->GetInstanceCount());
   Result->SetBoolField(TEXT("snappedToLandscape"), Landscape != nullptr);
   Result->SetStringField(TEXT("snapMode"), SnapMode);
+  Result->SetStringField(TEXT("pivot"), bPivotBase ? TEXT("base") : TEXT("cube"));
+  Result->SetNumberField(TEXT("replaced"), Replaced);
   Result->SetNumberField(TEXT("withoutGround"), NoGround);
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Instances spawned"), Result);
