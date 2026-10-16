@@ -13,6 +13,7 @@ MCP_DECLARE_ACTION_HANDLER(HandleModifyHeightmap); \
   MCP_DECLARE_ACTION_HANDLER(HandleViewportCamera); \
   MCP_DECLARE_ACTION_HANDLER(HandleCaptureViewport); \
   MCP_DECLARE_ACTION_HANDLER(HandleImportLandscapeFile); \
+  MCP_DECLARE_ACTION_HANDLER(HandlePartitionLandscape); \
   MCP_DECLARE_ACTION_HANDLER(HandleSampleLandscapeHeight); \
   MCP_DECLARE_ACTION_HANDLER(HandleSpawnInstancesFromFile); \
   MCP_DECLARE_ACTION_HANDLER(HandleSpawnGroupsFromFile); \

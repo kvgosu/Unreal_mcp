@@ -49,6 +49,8 @@ void UMcpAutomationBridgeSubsystem::RegisterCoreAndAssetHandlers()
     MCP_REGISTER_DIRECT("capture_viewport", HandleCaptureViewport);
     // SphereX: импорт ландшафта из файла — то же, что пункт меню Import from File
     MCP_REGISTER_DIRECT("import_landscape_file", HandleImportLandscapeFile);
+    // SphereX 12.10: ландшафт -> подгружаемые части World Partition
+    MCP_REGISTER_DIRECT("partition_landscape", HandlePartitionLandscape);
     MCP_REGISTER_DIRECT("sample_landscape_height", HandleSampleLandscapeHeight);
     MCP_REGISTER_DIRECT("spawn_instances_from_file", HandleSpawnInstancesFromFile);
     // SphereX: один актор на группу — дом отдельным объектом в Outliner
