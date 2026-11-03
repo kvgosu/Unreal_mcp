@@ -203,6 +203,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
     // подгонять, а не дома и дороги двигать»)
     double Pitch = 0.0;
     (*O)->TryGetNumberField(TEXT("pitch"), Pitch);
+    double Roll = 0.0;   // 03.11: поперечный наклон (трассы на склоне)
+    (*O)->TryGetNumberField(TEXT("roll"), Roll);
     if (Landscape) {
       const double Rad = FMath::DegreesToRadians(Yaw);
       const double CosY = FMath::Cos(Rad);
@@ -257,7 +259,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnInstancesFromFile(
       }
     }
     // куб стоит центром, а нам надо основанием на земле
-    Transforms.Add(FTransform(FRotator(Pitch, Yaw, 0.0),
+    Transforms.Add(FTransform(FRotator(Pitch, Yaw, Roll),
                               FVector(X, Y, Z + (bPivotBase ? 0.0 : SZ * 50.0) + ZOffset - Sink),
                               FVector(SX, SY, SZ)));
   }
